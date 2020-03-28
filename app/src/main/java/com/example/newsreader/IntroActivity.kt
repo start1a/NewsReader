@@ -37,6 +37,7 @@ class IntroActivity : AppCompatActivity() {
         runnable = Runnable {
             val intent = Intent(applicationContext, MainActivity::class.java)
                 startActivity(intent)
+            finish()
         }
         handler = Handler()
         handler?.run {

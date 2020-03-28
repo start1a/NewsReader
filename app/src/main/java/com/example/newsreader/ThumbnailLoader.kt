@@ -1,10 +1,13 @@
 package com.example.newsreader
 
+import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Rect
-import java.io.InputStream
+import android.util.Log
+import java.io.*
 import java.net.URL
+import java.util.*
 
 class ThumbnailLoader {
 
@@ -52,6 +55,31 @@ class ThumbnailLoader {
 
                 BitmapFactory.decodeStream(URL(url).openStream(), null,this)
             }
+        }
+
+        fun SaveBitmapToJpeg(bitmap: Bitmap, filesDir: File): String {
+
+            // 파일 객체 생성
+            val storage: File = filesDir
+            val fileName = UUID.randomUUID().toString() + ".jpg"
+            val tempFile = File(storage, fileName)
+
+            // 파일 저장
+            try {
+                tempFile.createNewFile()
+                val out = FileOutputStream(tempFile)
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 100, out)
+                out.close()
+
+                return filesDir.toString() + "/" + fileName
+
+            } catch (e: FileNotFoundException) {
+                Log.e("TAG","Bitmap FileNotFoundException : " + e.printStackTrace())
+            } catch (e: IOException) {
+                Log.e("TAG","Bitmap IOException : " + e.printStackTrace())
+            }
+
+            return ""
         }
     }
 }
