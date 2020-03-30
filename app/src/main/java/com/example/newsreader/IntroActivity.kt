@@ -4,6 +4,7 @@ import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.os.Handler
+import android.util.Log
 import android.view.View
 import com.bumptech.glide.Glide
 import com.example.newsreader.NewsList.MainActivity
@@ -11,17 +12,18 @@ import kotlinx.android.synthetic.main.activity_intro.*
 
 class IntroActivity : AppCompatActivity() {
 
-    var handler: Handler? = null
-    var runnable: Runnable? = null
+    var runnable = Runnable {
+        Log.d("TAG", "runnable execute!!")
+        val intent = Intent(applicationContext, MainActivity::class.java)
+        startActivity(intent)
+        finish()
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_intro)
 
-        Glide.with(applicationContext)
-            .load(R.drawable.icon_newspaper)
-            .override(360)
-            .into(imageCenter)
+        imageCenter.setBackgroundResource(R.drawable.icon_newspaper)
 
         window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_LOW_PROFILE or
                 View.SYSTEM_UI_FLAG_FULLSCREEN or
@@ -33,20 +35,11 @@ class IntroActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-
-        runnable = Runnable {
-            val intent = Intent(applicationContext, MainActivity::class.java)
-                startActivity(intent)
-            finish()
-        }
-        handler = Handler()
-        handler?.run {
-            postDelayed(runnable, 1300)
-        }
+        layout_intro.postDelayed(runnable, 1300)
     }
 
     override fun onPause() {
         super.onPause()
-        handler?.removeCallbacks(runnable)
+        layout_intro.removeCallbacks(runnable)
     }
 }

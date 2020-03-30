@@ -15,14 +15,12 @@ class NewsDao(private val realm: Realm) {
     }
 
     fun SearchNewsData(link: String): NewsData? {
-        var newsData: NewsData? =  null
-        realm.executeTransactionAsync {
-            newsData = it.where(NewsData::class.java)
+        val mRealm = Realm.getDefaultInstance()
+        var newsData = mRealm.where(NewsData::class.java)
                 .equalTo("link", link)
                 .findFirst()
-        }
         if (newsData == null) return null
-        else return realm.copyFromRealm(newsData)
+        else return mRealm.copyFromRealm(newsData)
     }
 
 }

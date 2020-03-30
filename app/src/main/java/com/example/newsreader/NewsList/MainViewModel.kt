@@ -8,16 +8,17 @@ import io.realm.Realm
 
 class MainViewModel: ViewModel() {
 
-    private val mRealm: Realm by lazy {
-        Realm.getDefaultInstance()
-    }
+    private lateinit var mRealm: Realm
 
-    private val mNewsDao: NewsDao by lazy {
-        NewsDao(mRealm)
-    }
+    private lateinit var mNewsDao: NewsDao
 
     var listNews: MutableLiveData<MutableList<NewsData>>
             = MutableLiveData<MutableList<NewsData>>().apply { value = mutableListOf() }
+
+    fun setRealmInsatance() {
+        mRealm = Realm.getDefaultInstance()
+        mNewsDao = NewsDao(mRealm)
+    }
 
     // 캐시할 데이터가 DB에 존재하는 지의 여부
     fun SearchNewsData(link: String): NewsData? {
