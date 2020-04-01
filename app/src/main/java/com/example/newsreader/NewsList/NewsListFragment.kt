@@ -104,16 +104,16 @@ class NewsListFragment : Fragment(), CoroutineScope {
                 super.onScrolled(recyclerView, dx, dy)
 
                 // 웹의 모든 데이터가 보여지면 더 이상 스크롤하지 않음
-                if (!isFull) {
-                    val lastVisibleItemPosition =
-                        (recyclerView.layoutManager as LinearLayoutManager).findLastCompletelyVisibleItemPosition()
-                    val itemTotalCount = recyclerView.adapter?.itemCount?.minus(1)
 
-                    if (lastVisibleItemPosition == itemTotalCount) {
+                val lastVisibleItemPosition =
+                    (recyclerView.layoutManager as LinearLayoutManager).findLastCompletelyVisibleItemPosition()
+                val itemTotalCount = recyclerView.adapter?.itemCount?.minus(1)
+
+                if (lastVisibleItemPosition == itemTotalCount) {
+                    if (!isFull) {
                         startService()
-                    }
+                    } else Toast.makeText(activity, "더 이상 가져올 데이터가 없습니다.", Toast.LENGTH_SHORT).show()
                 }
-                else Toast.makeText(activity, "더 이상 가져올 데이터가 없습니다.", Toast.LENGTH_SHORT).show()
             }
         })
     }
@@ -258,8 +258,7 @@ class NewsListFragment : Fragment(), CoroutineScope {
                 listData.add(newsData)
                 // DB에 데이터 저장
                 viewModel!!.SaveNewsData(newsData)
-            }
-            else listData.add(checkExistNewsData)
+            } else listData.add(checkExistNewsData)
             ++index
         }
     }
