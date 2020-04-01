@@ -35,13 +35,8 @@ class NewsListAdapter(private val list: MutableList<NewsData>):
     override fun onBindViewHolder(holder: NewsListViewHolder, position: Int) {
 
         // 썸네일
-        if (list[position].image != null)
+        if (!list[position].image.isNullOrEmpty())
             holder.containerView.thumbnailNews.setImageBitmap(BitmapFactory.decodeFile(list[position].image))
-//            Glide.with(holder.containerView)
-//                .load(BitmapFactory.decodeFile(list[position].image))
-//                .error(R.drawable.icon_earth)
-//                .override(150)
-//                .into(holder.containerView.thumbnailNews)
         else holder.containerView.thumbnailNews.visibility = View.GONE
 
         // 제목
