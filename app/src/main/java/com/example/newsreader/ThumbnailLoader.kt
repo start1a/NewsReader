@@ -74,7 +74,7 @@ class ThumbnailLoader {
                 return filesDir.toString() + "/" + fileName
 
             } catch (e: FileNotFoundException) {
-                Log.e("TAG","Bitmap FileNotFoundException : " + e.printStackTrace())
+                Log.e("TAG","Bitmap FileNotFoundException :  " + e.printStackTrace())
             } catch (e: IOException) {
                 Log.e("TAG","Bitmap IOException : " + e.printStackTrace())
             }

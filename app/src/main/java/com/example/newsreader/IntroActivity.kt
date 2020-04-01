@@ -13,7 +13,6 @@ import kotlinx.android.synthetic.main.activity_intro.*
 class IntroActivity : AppCompatActivity() {
 
     var runnable = Runnable {
-        Log.d("TAG", "runnable execute!!")
         val intent = Intent(applicationContext, MainActivity::class.java)
         startActivity(intent)
         finish()
@@ -31,6 +30,8 @@ class IntroActivity : AppCompatActivity() {
                 View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY or
                 View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or
                 View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+
+        val arrs = IntArray(5)
     }
 
     override fun onResume() {

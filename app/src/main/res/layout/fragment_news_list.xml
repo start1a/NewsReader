@@ -1,14 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.swiperefreshlayout.widget.SwipeRefreshLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/swipeLayout_newsList"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".NewsList.NewsListFragment"
-    android:id="@+id/swipeLayout_newsList">
+    tools:context=".NewsList.NewsListFragment">
 
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/NewsListView"
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        android:layout_height="match_parent"
+        android:orientation="vertical">
 
+        <Button
+            android:id="@+id/TextNum"
+            android:layout_width="150dp"
+            android:layout_height="wrap_content" />
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/NewsListView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+    </LinearLayout>
 </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>

@@ -16,7 +16,6 @@ class NewsListAdapter(private val list: MutableList<NewsData>):
     RecyclerView.Adapter<NewsListViewHolder>() {
 
     lateinit var itemClickListener: (link: String) -> Unit
-    lateinit var imageFileDir: String
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): NewsListViewHolder {
         val view = LayoutInflater.from(parent.context).inflate(R.layout.item_news, parent, false)
@@ -37,11 +36,12 @@ class NewsListAdapter(private val list: MutableList<NewsData>):
 
         // 썸네일
         if (list[position].image != null)
-            Glide.with(holder.containerView)
-                .load(BitmapFactory.decodeFile(list[position].image))
-                .error(R.drawable.icon_earth)
-                .override(150)
-                .into(holder.containerView.thumbnailNews)
+            holder.containerView.thumbnailNews.setImageBitmap(BitmapFactory.decodeFile(list[position].image))
+//            Glide.with(holder.containerView)
+//                .load(BitmapFactory.decodeFile(list[position].image))
+//                .error(R.drawable.icon_earth)
+//                .override(150)
+//                .into(holder.containerView.thumbnailNews)
         else holder.containerView.thumbnailNews.visibility = View.GONE
 
         // 제목

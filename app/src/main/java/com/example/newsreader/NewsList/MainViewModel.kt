@@ -12,6 +12,8 @@ class MainViewModel: ViewModel() {
 
     private lateinit var mNewsDao: NewsDao
 
+    var num_curNews_screen = 0
+
     var listNews: MutableLiveData<MutableList<NewsData>>
             = MutableLiveData<MutableList<NewsData>>().apply { value = mutableListOf() }
 
@@ -20,7 +22,7 @@ class MainViewModel: ViewModel() {
         mNewsDao = NewsDao(mRealm)
     }
 
-    // 캐시할 데이터가 DB에 존재하는 지의 여부
+    // 캐시할 데이터가 DB에 존재하면 해당 데이터 반환
     fun SearchNewsData(link: String): NewsData? {
         return mNewsDao.SearchNewsData(link)
     }
