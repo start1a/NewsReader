@@ -2,13 +2,12 @@ package com.example.newsreader.NewsList
 
 
 import android.content.Intent
-import android.os.AsyncTask
 import android.os.Bundle
-import android.os.Handler
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
@@ -17,28 +16,34 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.newsreader.*
 import io.realm.RealmList
 import kotlinx.android.synthetic.main.fragment_news_list.*
+import kotlinx.coroutines.*
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
-import java.io.File
-import java.io.FileNotFoundException
 import java.io.IOException
 import java.net.URL
 import java.util.*
 import java.util.regex.Pattern
+import kotlin.coroutines.CoroutineContext
 
 /**
  * A simple [Fragment] subclass.
  */
-class NewsListFragment : Fragment() {
+class NewsListFragment : Fragment(), CoroutineScope {
 
+    private var listData: MutableList<NewsData> = mutableListOf()
     private var listAdapter: NewsListAdapter? = null
     private var viewModel: MainViewModel? = null
-    private var filesdir: File? = null
 
     private val NUM_IN_SCREEN = 5
-    private var handler: Handler? = null
     private var isFull = false
-    private var htmlTasks: htmlTask? = null
+
+    private var mJob = Job()
+    private var handler: CoroutineExceptionHandler =
+        CoroutineExceptionHandler { coroutineContext, throwable ->
+            Log.e("HandlerException!!", ":" + throwable.printStackTrace())
+        }
+    override val coroutineContext: CoroutineContext = mJob + Dispatchers.Main + handler
+    private var coroutineScope = CoroutineScope(coroutineContext)
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -50,7 +55,6 @@ class NewsListFragment : Fragment() {
 
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         super.onActivityCreated(savedInstanceState)
-        filesdir = activity!!.applicationContext.filesDir
 
         // 액티비티를 처음 시작
         if (viewModel == null) {
@@ -62,11 +66,10 @@ class NewsListFragment : Fragment() {
                 )
                     .get(MainViewModel::class.java)
             }
+            viewModel!!.filesdir = activity!!.applicationContext.filesDir
             // 크롤링 실행
-            executeHTML()
+            startService()
         }
-
-        handler = Handler()
 
         // 리스트 출력
         viewModel!!.let {
@@ -84,37 +87,50 @@ class NewsListFragment : Fragment() {
                 TextNum.setText(it.size.toString() + " / " + viewModel!!.num_curNews_screen.toString())
             })
         }
-        setRecyclerView()
 
+        // 밀어서 새로고침
         swipeLayout_newsList.setOnRefreshListener {
-            viewModel!!.let{
-                it.listNews.value = mutableListOf()
+            viewModel!!.let {
                 it.num_curNews_screen = 0
+                it.listNews.value = mutableListOf()
             }
             isFull = false
-            executeHTML()
+            startService()
         }
 
+        // 마지막 아이템 스크롤
         NewsListView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
                 super.onScrolled(recyclerView, dx, dy)
 
+                // 웹의 모든 데이터가 보여지면 더 이상 스크롤하지 않음
                 if (!isFull) {
                     val lastVisibleItemPosition =
                         (recyclerView.layoutManager as LinearLayoutManager).findLastCompletelyVisibleItemPosition()
                     val itemTotalCount = recyclerView.adapter?.itemCount?.minus(1)
 
                     if (lastVisibleItemPosition == itemTotalCount) {
-                        htmlTask().execute()
+                        startService()
                     }
                 }
+                else Toast.makeText(activity, "더 이상 가져올 데이터가 없습니다.", Toast.LENGTH_SHORT).show()
             }
         })
     }
 
-    override fun onStop() {
-        super.onStop()
-        htmlTasks?.cancel(true)
+    // 웹 크롤링 + 리스트 업데이트
+    fun startService() {
+        coroutineScope.launch {
+            WebCrawling()
+            viewModel!!.let {
+                it.num_curNews_screen += NUM_IN_SCREEN
+                val list = it.listNews.value
+                list?.addAll(listData)
+                it.listNews.value = list
+            }
+            listData = mutableListOf()
+            swipeLayout_newsList.isRefreshing = false
+        }
     }
 
     fun setRecyclerView() {
@@ -122,19 +138,14 @@ class NewsListFragment : Fragment() {
         NewsListView.layoutManager = LinearLayoutManager(activity)
     }
 
-    fun executeHTML() {
-        htmlTasks = htmlTask()
-        htmlTasks?.execute()
-    }
-
     fun ExtractKeyWord(desc: String): RealmList<KeywordNewsDesc> {
         // 3자 이상의 문자나 숫자 조합
-        val pattern = Pattern.compile("([^! (),.?\"\'‘’{}|<>]{2,})")
+        val pattern = Pattern.compile("([^! (),.…·ㆍ~?\"\'“”‘’+-/{}|<>\n\t]{2,})")
         val matcher = pattern.matcher(desc)
         val keyList = mutableListOf<Keyword>()
 
-        var key: String
         // 키워드를 하나씩 반환
+        var key: String
         while (matcher.find()) {
             key = matcher.group()
             // 중복 데이터 탐색
@@ -146,12 +157,6 @@ class NewsListFragment : Fragment() {
             if (i == keyList.size)
                 keyList.add(Keyword(key, 1))
             else ++keyList[i].num
-        }
-
-        var aa = 0
-        for (item: Keyword in keyList)
-        {
-            Log.d("TAG1", aa++.toString() + " : (" + item.key + "  " + item.num + ")")
         }
 
         // 개수로 내림차순 정렬 후
@@ -170,125 +175,97 @@ class NewsListFragment : Fragment() {
             }
         })
 
-        var a = 0
-        for (item: Keyword in keyList)
-        {
-            Log.d("TAG2", a++.toString() + " : (" + item.key + "  " + item.num + ")")
-        }
+        if (keyList.size < 3)
+            return getTopKeyword(keyList.subList(0, keyList.size))
+        else return getTopKeyword(keyList.subList(0, 3))
+    }
 
-        return RealmList<KeywordNewsDesc>().apply {
-            var i = 0
-            while (i < keyList.size && i < 3) {
-                try {
-                    this.add(KeywordNewsDesc(keyList[i].key))
-                } catch (e: Exception) {
-                    Log.d("TAG", "undefinedException : " + e.printStackTrace().toString())
-                }
-            }
+    fun getTopKeyword(list: MutableList<Keyword>): RealmList<KeywordNewsDesc> {
+        return list.run {
+            val realmList = RealmList<KeywordNewsDesc>()
+            for (keyword: Keyword in this)
+                realmList.add(KeywordNewsDesc(keyword.key))
+
+            realmList
         }
     }
 
-    inner class htmlTask : AsyncTask<Void, Void, MutableList<NewsData>>() {
-        override fun doInBackground(vararg params: Void?): MutableList<NewsData> {
+    suspend fun WebCrawling() = withContext(Dispatchers.IO + handler) {
 
-            val list = mutableListOf<NewsData>()
+        val doc = Jsoup.connect("https://news.google.com/rss?hl=ko&gl=KR&ceid=KR:ko").get()
+        val html = doc.select("item")
+        // db 객체 생성
+        viewModel!!.setRealmInsatance()
+        // 불러올 데이터 인덱스
+        var index = viewModel!!.num_curNews_screen
+        var endIndex = index + NUM_IN_SCREEN
+        if (endIndex > html.size) {
+            endIndex = html.size
+            isFull = true
+        }
+        // 5개 단위로 로드
+        while (index < endIndex) {
+            // 이미 데이터가 DB에 존재하는지 체크
+            val url = html[index].select("link").text()
+            val checkExistNewsData = viewModel!!.SearchNewsData(url)
 
-            try {
-                val doc = Jsoup.connect("https://news.google.com/rss?hl=ko&gl=KR&ceid=KR:ko").get()
-                val html = doc.select("item")
-//                handler?.post(Runnable {
-//                    Toast.makeText(activity, html.size.toString(), Toast.LENGTH_LONG).show()
-//                })
-                // db 객체 생성
-                viewModel!!.setRealmInsatance()
-                // 불러올 데이터 인덱스
-                var index = viewModel!!.num_curNews_screen
-                var endIndex = index + NUM_IN_SCREEN
-                if (endIndex > html.size) {
-                    endIndex = html.size
-                    isFull = true
-                }
-                // 5개씩 불러옴
-                while (index < endIndex) {
-                    // 기존 데이터(link)가 존재하는가
-                    val page = html.get(index).select("link").text()
-                    val selectedNewsData = viewModel!!.SearchNewsData(page)
-
-                    // 없음
-                    if (selectedNewsData == null) {
-                        var link: Document
-                        // 웹 크롤링이 가능한 사이트인지
-                        try {
-                            link = Jsoup.connect(page).get()
-                        } catch (e: IOException) {
-                            // 불가능할 시 해당 사이트 크롤링 취소
-                            // 해당 아이템을 가져올 수 없어 다음 아이템으로 개수를 채움
-                            Log.e("httpException : ", page + "\n" + e.printStackTrace())
-                            if (endIndex < html.size) ++endIndex
-                            continue
-                        }
-
-                        // 텍스트
-                        val title = html.get(index).select("title").text()
-                        val desc = link.select("meta[property=og:description]").attr("content")
-
-                        // 이미지
-                        val imageUrl = link.select("meta[property=og:image]").attr("content")
-                        var imagePath = ""
-                        if (!imageUrl.isNullOrEmpty()) {
-                            try {
-                                var ist = URL(imageUrl).openStream()
-                                var image = ThumbnailLoader.decodeSampledBitmapFromResource(
-                                    ist,
-                                    imageUrl,
-                                    100,
-                                    100
-                                )
-                                // 정상 비트맵이 반환되면 내부 저장소에 저장
-                                image?.let {
-                                    imagePath = ThumbnailLoader.SaveBitmapToJpeg(it, filesdir!!)
-                                }
-                                ist.close()
-                            } catch (e: FileNotFoundException) {
-                                Log.e(
-                                    "TAG",
-                                    "FileNotFoundException in Fragment : " + e.printStackTrace()
-                                )
-                            }
-                        }
-                         //키워드
-                        val keywords = RealmList<KeywordNewsDesc>()
-                        keywords.add(KeywordNewsDesc("가"))
-                        keywords.add(KeywordNewsDesc("나"))
-                        keywords.add(KeywordNewsDesc("다"))
-                        // 썸네일 이미지
-                        //val bitmap = BitmapFactory.decodeFile(imagePath)
-                        // 뉴스 데이터
-                        val newsData = NewsData(page, title, desc, imagePath, Date(), keywords)
-                        viewModel!!.SaveNewsData(newsData)
-                        list.add(newsData)
-                    }
-                    // 있음
-                    else list.add(selectedNewsData)
-
+            // 없음
+            if (checkExistNewsData == null) {
+                // 해당 링크의 크롤링이 가능한가
+                var link: Document
+                try {
+                    link = Jsoup.connect(url).get()
+                } catch (e: IOException) {
+                    // 불가능할 경우 다음 아이템으로 이동
+                    Log.e("TAGSSS", "IOException!! : " + url)
+                    // 항상 5개씩 받기 위해 다음 인덱스로 이동
                     ++index
+                    if (endIndex < html.size) ++endIndex
+                    continue
                 }
-            } catch (e: IOException) {
-                e.printStackTrace()
-            }
 
-            return list
-        }
+                // 텍스트
+                val title = html[index].select("title").text()
+                var desc = link.select("meta[property=og:description]").attr("content")
 
-        override fun onPostExecute(result: MutableList<NewsData>) {
-            super.onPostExecute(result)
-            val list = viewModel!!.listNews.value
-            list?.addAll(result)
-            viewModel!!.let {
-                it.num_curNews_screen += NUM_IN_SCREEN
-                it.listNews.value = list
+                // 이미지
+                var imageUrl = link.select("meta[property=og:image]").attr("content")
+                var imagePath = ""
+                if (!imageUrl.isNullOrEmpty()) {
+                    try {
+                        // 이미지 비트맵 리사이즈 작업
+                        var ist = URL(imageUrl).openStream()
+                        var image = ThumbnailLoader.decodeSampledBitmapFromResource(
+                            ist,
+                            imageUrl,
+                            100,
+                            100
+                        )
+                        // 정상 비트맵이 반환되면 내부 저장소에 저장
+                        image?.let {
+                            imagePath =
+                                ThumbnailLoader.SaveBitmapToJpeg(it, viewModel!!.filesdir)
+                        }
+                        ist.close()
+                    } catch (e: IOException) {
+                        Log.e(
+                            "TAG",
+                            "IOException in Fragment : " + e.printStackTrace()
+                        )
+                    }
+                }
+                val newsData = NewsData(url, title, desc, imagePath, Date(), ExtractKeyWord(desc))
+                listData.add(newsData)
+                // DB에 데이터 저장
+                viewModel!!.SaveNewsData(newsData)
             }
-            swipeLayout_newsList.isRefreshing = false
+            else listData.add(checkExistNewsData)
+            ++index
         }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        mJob.cancel()
     }
 }

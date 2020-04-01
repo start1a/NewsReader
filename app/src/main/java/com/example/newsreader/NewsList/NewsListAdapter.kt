@@ -47,7 +47,9 @@ class NewsListAdapter(private val list: MutableList<NewsData>):
         // 제목
         holder.containerView.textTitle.text = list[position].title
         // 본문
-        holder.containerView.textDesc.text = list[position].description
+        if (list[position].description.length > 60)
+            holder.containerView.textDesc.text = list[position].description.substring(0..60)
+        else holder.containerView.textDesc.text = list[position].description
         // 링크 주소
         holder.containerView.tag = list[position].link
         // 키워드

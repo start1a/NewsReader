@@ -5,12 +5,15 @@ import androidx.lifecycle.ViewModel
 import com.example.newsreader.NewsDao
 import com.example.newsreader.NewsData
 import io.realm.Realm
+import java.io.File
 
 class MainViewModel: ViewModel() {
 
     private lateinit var mRealm: Realm
 
     private lateinit var mNewsDao: NewsDao
+
+    lateinit var filesdir: File
 
     var num_curNews_screen = 0
 
