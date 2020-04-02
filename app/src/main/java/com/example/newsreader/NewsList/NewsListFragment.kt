@@ -66,7 +66,12 @@ class NewsListFragment : Fragment(), CoroutineScope {
                 )
                     .get(MainViewModel::class.java)
             }
-            viewModel!!.filesdir = activity!!.applicationContext.filesDir
+            // 데이터 초기화
+            viewModel!!.let {
+                listAdapter = NewsListAdapter(it.listNews.value!!)
+                NewsListView.adapter = listAdapter
+                NewsListView.layoutManager = LinearLayoutManager(activity)
+            }
             // 크롤링 실행
             startService()
         }
@@ -74,8 +79,7 @@ class NewsListFragment : Fragment(), CoroutineScope {
         // 리스트 출력
         viewModel!!.let {
             it.listNews.observe(this, Observer {
-                listAdapter = NewsListAdapter(it)
-                setRecyclerView()
+                listAdapter?.notifyDataSetChanged()
 
                 listAdapter.let {
                     it?.itemClickListener = {
@@ -95,7 +99,10 @@ class NewsListFragment : Fragment(), CoroutineScope {
                 it.listNews.value = mutableListOf()
             }
             isFull = false
-            startService()
+            CoroutineScope(Dispatchers.Main).launch {
+                mJob.cancelAndJoin()
+                startService()
+            }
         }
 
         // 마지막 아이템 스크롤
@@ -112,7 +119,11 @@ class NewsListFragment : Fragment(), CoroutineScope {
                 if (lastVisibleItemPosition == itemTotalCount) {
                     if (!isFull) {
                         startService()
-                    } else Toast.makeText(activity, "더 이상 가져올 데이터가 없습니다.", Toast.LENGTH_SHORT).show()
+                    } else Toast.makeText(
+                        activity,
+                        "더 이상 가져올 데이터가 없습니다.",
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
             }
         })
@@ -122,25 +133,22 @@ class NewsListFragment : Fragment(), CoroutineScope {
     fun startService() {
         coroutineScope.launch {
             WebCrawling()
-            viewModel!!.let {
-                it.num_curNews_screen += NUM_IN_SCREEN
-                val list = it.listNews.value
-                list?.addAll(listData)
-                it.listNews.value = list
+            if (isActive) {
+                viewModel!!.let {
+                    it.num_curNews_screen += NUM_IN_SCREEN
+                    val list = it.listNews.value
+                    list?.addAll(listData)
+                    it.listNews.value = list
+                }
+                listData = mutableListOf()
             }
-            listData = mutableListOf()
-            swipeLayout_newsList.isRefreshing = false
         }
-    }
-
-    fun setRecyclerView() {
-        NewsListView.adapter = listAdapter
-        NewsListView.layoutManager = LinearLayoutManager(activity)
+        swipeLayout_newsList.isRefreshing = false
     }
 
     fun ExtractKeyWord(desc: String): RealmList<KeywordNewsDesc> {
         // 3자 이상의 문자나 숫자 조합
-        val pattern = Pattern.compile("([^! (),.…·ㆍ~?\"\'“”‘’+-/{}|<>\n\t]{2,})")
+        val pattern = Pattern.compile("([^! (),.…·ㆍ~?=\\-\"\'“”‘’`+-/{}\\[\\]|<>\n\t]{2,})")
         val matcher = pattern.matcher(desc)
         val keyList = mutableListOf<Keyword>()
 
@@ -190,7 +198,7 @@ class NewsListFragment : Fragment(), CoroutineScope {
         }
     }
 
-    suspend fun WebCrawling() = withContext(Dispatchers.IO + handler) {
+    suspend fun WebCrawling() = withContext(mJob + Dispatchers.IO + handler) {
 
         val doc = Jsoup.connect("https://news.google.com/rss?hl=ko&gl=KR&ceid=KR:ko").get()
         val html = doc.select("item")
@@ -204,7 +212,7 @@ class NewsListFragment : Fragment(), CoroutineScope {
             isFull = true
         }
         // 5개 단위로 로드
-        while (index < endIndex) {
+        while (index < endIndex && isActive) {
             // 이미 데이터가 DB에 존재하는지 체크
             val url = html[index].select("link").text()
             val checkExistNewsData = viewModel!!.SearchNewsData(url)
@@ -217,7 +225,7 @@ class NewsListFragment : Fragment(), CoroutineScope {
                     link = Jsoup.connect(url).get()
                 } catch (e: IOException) {
                     // 불가능할 경우 다음 아이템으로 이동
-                    Log.e("TAGSSS", "IOException!! : " + url)
+                    Log.e("TAGSSS", "IOException!! : " + index.toString() + "  " + url)
                     // 항상 5개씩 받기 위해 다음 인덱스로 이동
                     ++index
                     if (endIndex < html.size) ++endIndex
@@ -233,9 +241,9 @@ class NewsListFragment : Fragment(), CoroutineScope {
                 var imagePath = ""
                 if (!imageUrl.isNullOrEmpty()) {
                     try {
-                        // 이미지 비트맵 리사이즈 작업
-                        var ist = URL(imageUrl).openStream()
-                        var image = ThumbnailLoader.decodeSampledBitmapFromResource(
+                        // 이미지 url -> 비트맵 : 리사이즈 작업
+                        val ist = URL(imageUrl).openStream()
+                        val image = ThumbnailLoader.decodeSampledBitmapFromResource(
                             ist,
                             imageUrl,
                             100,
@@ -248,6 +256,7 @@ class NewsListFragment : Fragment(), CoroutineScope {
                         }
                         ist.close()
                     } catch (e: IOException) {
+                        Log.d("TAGGGGG", index.toString() + "  :  " + imageUrl)
                         Log.e(
                             "TAG",
                             "IOException in Fragment : " + e.printStackTrace()

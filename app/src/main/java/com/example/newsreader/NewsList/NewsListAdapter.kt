@@ -1,6 +1,7 @@
 package com.example.newsreader.NewsList
 
 import android.graphics.BitmapFactory
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -36,7 +37,10 @@ class NewsListAdapter(private val list: MutableList<NewsData>):
 
         // 썸네일
         if (!list[position].image.isNullOrEmpty())
-            holder.containerView.thumbnailNews.setImageBitmap(BitmapFactory.decodeFile(list[position].image))
+            Glide.with(holder.containerView)
+                .load(BitmapFactory.decodeFile(list[position].image))
+                .error(R.drawable.ic_launcher_background)
+                .into(holder.containerView.thumbnailNews)
         else holder.containerView.thumbnailNews.visibility = View.GONE
 
         // 제목

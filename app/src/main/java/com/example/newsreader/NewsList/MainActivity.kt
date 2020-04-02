@@ -23,5 +23,6 @@ class MainActivity : AppCompatActivity() {
             ViewModelProvider(viewModelStore, ViewModelProvider.AndroidViewModelFactory(it))
                 .get(MainViewModel::class.java)
         }
+        viewModel!!.filesdir = filesDir
     }
 }
