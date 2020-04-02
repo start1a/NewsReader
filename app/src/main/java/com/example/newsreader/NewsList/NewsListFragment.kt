@@ -35,6 +35,7 @@ class NewsListFragment : Fragment(), CoroutineScope {
     private var viewModel: MainViewModel? = null
 
     private val NUM_IN_SCREEN = 5
+    private var num_next_crwalIndex = 0
     private var isFull = false
 
     private var mJob = Job()
@@ -42,8 +43,10 @@ class NewsListFragment : Fragment(), CoroutineScope {
         CoroutineExceptionHandler { coroutineContext, throwable ->
             Log.e("HandlerException!!", ":" + throwable.printStackTrace())
         }
-    override val coroutineContext: CoroutineContext = mJob + Dispatchers.Main + handler
+    override val coroutineContext: CoroutineContext
+        get() = mJob + Dispatchers.Main + handler
     private var coroutineScope = CoroutineScope(coroutineContext)
+
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -71,6 +74,14 @@ class NewsListFragment : Fragment(), CoroutineScope {
                 listAdapter = NewsListAdapter(it.listNews.value!!)
                 NewsListView.adapter = listAdapter
                 NewsListView.layoutManager = LinearLayoutManager(activity)
+
+                listAdapter.let {
+                    it?.itemClickListener = {
+                        val intent = Intent(activity, DetailNewsActivity::class.java)
+                        intent.putExtra("link", it)
+                        startActivity(intent)
+                    }
+                }
             }
             // 크롤링 실행
             startService()
@@ -80,14 +91,6 @@ class NewsListFragment : Fragment(), CoroutineScope {
         viewModel!!.let {
             it.listNews.observe(this, Observer {
                 listAdapter?.notifyDataSetChanged()
-
-                listAdapter.let {
-                    it?.itemClickListener = {
-                        val intent = Intent(activity, DetailNewsActivity::class.java)
-                        intent.putExtra("link", it)
-                        startActivity(intent)
-                    }
-                }
                 TextNum.setText(it.size.toString() + " / " + viewModel!!.num_curNews_screen.toString())
             })
         }
@@ -97,10 +100,15 @@ class NewsListFragment : Fragment(), CoroutineScope {
             viewModel!!.let {
                 it.num_curNews_screen = 0
                 it.listNews.value = mutableListOf()
+                listAdapter = NewsListAdapter(it.listNews.value!!)
+                NewsListView.adapter = listAdapter
+                NewsListView.layoutManager = LinearLayoutManager(activity)
             }
             isFull = false
-            CoroutineScope(Dispatchers.Main).launch {
+            launch {
                 mJob.cancelAndJoin()
+                mJob = Job()
+                coroutineScope = CoroutineScope(mJob + Dispatchers.Main + handler)
                 startService()
             }
         }
@@ -110,13 +118,12 @@ class NewsListFragment : Fragment(), CoroutineScope {
             override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
                 super.onScrolled(recyclerView, dx, dy)
 
-                // 웹의 모든 데이터가 보여지면 더 이상 스크롤하지 않음
-
                 val lastVisibleItemPosition =
                     (recyclerView.layoutManager as LinearLayoutManager).findLastCompletelyVisibleItemPosition()
                 val itemTotalCount = recyclerView.adapter?.itemCount?.minus(1)
 
                 if (lastVisibleItemPosition == itemTotalCount) {
+                    // 웹의 모든 데이터가 보여지면 더 이상 스크롤하지 않음
                     if (!isFull) {
                         startService()
                     } else Toast.makeText(
@@ -130,21 +137,18 @@ class NewsListFragment : Fragment(), CoroutineScope {
     }
 
     // 웹 크롤링 + 리스트 업데이트
-    fun startService() {
-        coroutineScope.launch {
-            WebCrawling()
-            if (isActive) {
-                viewModel!!.let {
-                    it.num_curNews_screen += NUM_IN_SCREEN
-                    val list = it.listNews.value
-                    list?.addAll(listData)
-                    it.listNews.value = list
-                }
-                listData = mutableListOf()
-            }
-        }
+    fun startService() = coroutineScope.launch {
+        WebCrawling()
         swipeLayout_newsList.isRefreshing = false
+        viewModel!!.let {
+            it.num_curNews_screen += num_next_crwalIndex
+            val list = it.listNews.value
+            list?.addAll(listData)
+            listData = mutableListOf()
+            it.listNews.value = list
+        }
     }
+
 
     fun ExtractKeyWord(desc: String): RealmList<KeywordNewsDesc> {
         // 3자 이상의 문자나 숫자 조합
@@ -198,7 +202,7 @@ class NewsListFragment : Fragment(), CoroutineScope {
         }
     }
 
-    suspend fun WebCrawling() = withContext(mJob + Dispatchers.IO + handler) {
+    suspend fun WebCrawling() = withContext(Dispatchers.IO) {
 
         val doc = Jsoup.connect("https://news.google.com/rss?hl=ko&gl=KR&ceid=KR:ko").get()
         val html = doc.select("item")
@@ -211,6 +215,7 @@ class NewsListFragment : Fragment(), CoroutineScope {
             endIndex = html.size
             isFull = true
         }
+        num_next_crwalIndex = index
         // 5개 단위로 로드
         while (index < endIndex && isActive) {
             // 이미 데이터가 DB에 존재하는지 체크
@@ -225,7 +230,7 @@ class NewsListFragment : Fragment(), CoroutineScope {
                     link = Jsoup.connect(url).get()
                 } catch (e: IOException) {
                     // 불가능할 경우 다음 아이템으로 이동
-                    Log.e("TAGSSS", "IOException!! : " + index.toString() + "  " + url)
+                    Log.e("link connect failed", "IOException!! : " + index.toString() + "  " + url)
                     // 항상 5개씩 받기 위해 다음 인덱스로 이동
                     ++index
                     if (endIndex < html.size) ++endIndex
@@ -256,10 +261,10 @@ class NewsListFragment : Fragment(), CoroutineScope {
                         }
                         ist.close()
                     } catch (e: IOException) {
-                        Log.d("TAGGGGG", index.toString() + "  :  " + imageUrl)
+                        Log.d("imageURL", index.toString() + "  :  " + imageUrl)
                         Log.e(
-                            "TAG",
-                            "IOException in Fragment : " + e.printStackTrace()
+                            "image stream error",
+                            "IOException : " + e.printStackTrace()
                         )
                     }
                 }
@@ -270,6 +275,8 @@ class NewsListFragment : Fragment(), CoroutineScope {
             } else listData.add(checkExistNewsData)
             ++index
         }
+        // 스크롤 당 크롤링한 데이터 개수
+        num_next_crwalIndex = index - num_next_crwalIndex
     }
 
     override fun onDestroy() {
