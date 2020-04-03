@@ -13,7 +13,6 @@ class NewsReaderApplication: Application() {
         val realmConfiguration = RealmConfiguration.Builder()
             .schemaVersion(0)
             .migration(NewsReaderDBMigration())
-            .deleteRealmIfMigrationNeeded()
             .build()
         Realm.setDefaultConfiguration(realmConfiguration)
     }

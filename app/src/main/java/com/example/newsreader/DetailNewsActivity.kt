@@ -15,11 +15,14 @@ class DetailNewsActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_detail_news)
 
-        val link = intent.getStringExtra("link")
+        val data = intent.getStringArrayListExtra("data") as ArrayList<String>
+        if (data.size > 1) textKey1.text = data[1]
+        if (data.size > 2) textKey2.text = data[2]
+        if (data.size > 3) textKey3.text = data[3]
         // 자바스크립트 허용
         newsWebView.settings.javaScriptEnabled = true
 
-        newsWebView.loadUrl(link)
+        newsWebView.loadUrl("https://news.google.com/__i/rss/rd/articles/CBMiOGh0dHA6Ly93d3cuaGFuaS5jby5rci9hcnRpL3BvbGl0aWNzL2Fzc2VtYmx5LzkzNTQ2MC5odG1s0gEA?oc=5")
         newsWebView.webChromeClient = WebChromeClient()
         newsWebView.webViewClient = WebViewClientClass()
     }

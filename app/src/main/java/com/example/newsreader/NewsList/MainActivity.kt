@@ -1,5 +1,6 @@
 package com.example.newsreader.NewsList
 
+import android.content.Context
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import androidx.lifecycle.ViewModelProvider
@@ -23,6 +24,5 @@ class MainActivity : AppCompatActivity() {
             ViewModelProvider(viewModelStore, ViewModelProvider.AndroidViewModelFactory(it))
                 .get(MainViewModel::class.java)
         }
-        viewModel!!.filesdir = filesDir
     }
 }

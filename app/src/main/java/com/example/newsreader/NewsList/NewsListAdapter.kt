@@ -15,14 +15,14 @@ import kotlinx.android.synthetic.main.item_news.view.*
 class NewsListAdapter(private val list: MutableList<NewsData>):
     RecyclerView.Adapter<NewsListViewHolder>() {
 
-    lateinit var itemClickListener: (link: String) -> Unit
+    lateinit var itemClickListener: (list: ArrayList<String>) -> Unit
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): NewsListViewHolder {
         val view = LayoutInflater.from(parent.context).inflate(R.layout.item_news, parent, false)
         view.setOnClickListener {
             itemClickListener.run {
-                val link = it.tag as String
-                this(link)
+                val list = it.tag as ArrayList<String>
+                this(list)
             }
         }
         return NewsListViewHolder(view)
@@ -43,16 +43,33 @@ class NewsListAdapter(private val list: MutableList<NewsData>):
         else holder.containerView.thumbnailNews.visibility = View.GONE
 
         // 제목
-        holder.containerView.textTitle.text = list[position].title
+        if (list[position].title.length > 20)
+            holder.containerView.textTitle.text = list[position].title.substring(0..20)
+        else holder.containerView.textTitle.text = list[position].title
+
         // 본문
         if (list[position].description.length > 60)
             holder.containerView.textDesc.text = list[position].description.substring(0..60)
         else holder.containerView.textDesc.text = list[position].description
-        // 링크 주소
-        holder.containerView.tag = list[position].link
+
         // 키워드
-        holder.containerView.textKeyword.text = "키워드 : "
-        for (text: KeywordNewsDesc in list[position].keywords)
-            holder.containerView.textKeyword.append(text.keyword + "  ")
+        if (list[position].keywords.size == 0) {
+            holder.containerView.textKey1.visibility = View.GONE
+            holder.containerView.textKey2.visibility = View.GONE
+            holder.containerView.textKey3.visibility = View.GONE
+        }
+        if (list[position].keywords.size > 0)
+            holder.containerView.textKey1.text = list[position].keywords[0]?.keyword
+        if (list[position].keywords.size > 1)
+            holder.containerView.textKey2.text = list[position].keywords[1]?.keyword
+        if (list[position].keywords.size > 2)
+            holder.containerView.textKey3.text = list[position].keywords[2]?.keyword
+
+        // 상세 보기 데이터
+        val listStr = arrayListOf<String>()
+        listStr.add(list[position].link)
+        for (i in 0..list[position].keywords.size - 1)
+            listStr.add(list[position].keywords[i]!!.keyword)
+        holder.containerView.tag = listStr
     }
 }
