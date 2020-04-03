@@ -6,10 +6,8 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
-import com.example.newsreader.KeywordNewsDesc
 import com.example.newsreader.NewsData
 import com.example.newsreader.R
-import io.realm.RealmList
 import kotlinx.android.synthetic.main.item_news.view.*
 
 class NewsListAdapter(private val list: MutableList<NewsData>):

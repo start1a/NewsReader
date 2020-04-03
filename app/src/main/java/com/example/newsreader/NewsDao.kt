@@ -19,11 +19,6 @@ class NewsDao(private val realm: Realm) {
 
     // date 시간을 기준으로 가장 최신 데이터 추출
     fun GetNewsData(): RealmResults<NewsData> {
-//        var dbDatas = realm.where(NewsData::class.java)
-//            .lessThanOrEqualTo("date", date)
-//            .sort("date", Sort.DESCENDING)
-//            .findAll()
-//        return dbDatas.subList(0,5) as RealmResults<NewsData>
         return realm.where(NewsData::class.java)
             .sort("date", Sort.ASCENDING)
             .findAll()

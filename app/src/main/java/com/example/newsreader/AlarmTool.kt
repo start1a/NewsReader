@@ -22,20 +22,13 @@ class AlarmTool {
                 PendingIntent.getBroadcast(context, 0, intent, 0)
             }
 
-//            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-//                alarmMgr?.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + AlarmManager.INTERVAL_FIFTEEN_MINUTES, alarmIntent)
-//            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
-//                alarmMgr?.setExact(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + 10000, alarmIntent)
-//            }else {
-//                alarmMgr?.set(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + 10000, alarmIntent);
-//            }
-
-            alarmMgr?.setInexactRepeating(
-                AlarmManager.ELAPSED_REALTIME_WAKEUP,
-                SystemClock.elapsedRealtime() + AlarmManager.INTERVAL_FIFTEEN_MINUTES,
-                AlarmManager.INTERVAL_FIFTEEN_MINUTES,
-                alarmIntent
-            )
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                alarmMgr?.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + AlarmManager.INTERVAL_HALF_HOUR, alarmIntent)
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+                alarmMgr?.setExact(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + AlarmManager.INTERVAL_HALF_HOUR, alarmIntent)
+            }else {
+                alarmMgr?.set(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + AlarmManager.INTERVAL_HALF_HOUR, alarmIntent);
+            }
         }
     }
 
