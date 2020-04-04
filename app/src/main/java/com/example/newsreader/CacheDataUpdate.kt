@@ -29,15 +29,15 @@ class CacheDataUpdate: BroadcastReceiver() {
             mNewsDao = NewsDao(mRealm)
         }
 
-        suspend fun WebCrawling() = withContext(Dispatchers.IO) {
+        suspend fun WebCrawling(endIndex: Int) = withContext(Dispatchers.IO) {
 
-            val doc = Jsoup.connect("https://news.google.com/rss?hl=ko&gl=KR&ceid=KR:ko").get()
+            val doc = Jsoup.connect("https://news.google.com/rss").get()
             val html = doc.select("item")
             // db 객체 생성
             setRealmInsatance()
             // 불러올 데이터 인덱스
             var index = 0
-            while (index < html.size) {
+            while (index < endIndex) {
                 // 이미 데이터가 DB에 존재하는지 체크
                 val url = html[index].select("link").text()
                 val checkExistNewsData = mNewsDao.SearchNewsData(url)
@@ -164,7 +164,7 @@ class CacheDataUpdate: BroadcastReceiver() {
             }
             AlarmTool.ACTION_UPDATE_CACHE_DATA -> {
                 GlobalScope.launch {
-                    WebCrawling()
+                    WebCrawling(34)
                     RemoveOldData(dateNews!!)
                     dateNews = null
                 }

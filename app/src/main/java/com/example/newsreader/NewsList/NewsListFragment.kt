@@ -75,9 +75,10 @@ class NewsListFragment : Fragment() {
                 CoroutineScope(Dispatchers.Main).launch {
                     // 웹 크롤링
                     llProgressBar.visibility = View.VISIBLE
-                    CacheDataUpdate.WebCrawling()
+                    CacheDataUpdate.WebCrawling(6)
                     llProgressBar.visibility = View.GONE
                     listAdapter?.notifyDataSetChanged()
+                    CacheDataUpdate.WebCrawling(34)
                 }
             }
         }

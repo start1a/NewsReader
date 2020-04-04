@@ -22,7 +22,7 @@ class DetailNewsActivity : AppCompatActivity() {
         // 자바스크립트 허용
         newsWebView.settings.javaScriptEnabled = true
 
-        newsWebView.loadUrl("https://news.google.com/__i/rss/rd/articles/CBMiOGh0dHA6Ly93d3cuaGFuaS5jby5rci9hcnRpL3BvbGl0aWNzL2Fzc2VtYmx5LzkzNTQ2MC5odG1s0gEA?oc=5")
+        newsWebView.loadUrl(data[0])
         newsWebView.webChromeClient = WebChromeClient()
         newsWebView.webViewClient = WebViewClientClass()
     }
