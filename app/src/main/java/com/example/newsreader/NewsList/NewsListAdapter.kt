@@ -33,21 +33,21 @@ class NewsListAdapter(private val list: MutableList<NewsData>):
     override fun onBindViewHolder(holder: NewsListViewHolder, position: Int) {
 
         // 썸네일
-        if (!list[position].image.isNullOrEmpty())
+        if (list[position].image.isNotEmpty())
             Glide.with(holder.containerView)
-                .load(BitmapFactory.decodeFile(list[position].image))
+                .load(list[position].image)
                 .error(R.drawable.ic_launcher_background)
                 .into(holder.containerView.thumbnailNews)
-        else holder.containerView.thumbnailNews.visibility = View.GONE
+        else holder.containerView.thumbnailNews.setImageResource(R.drawable.no_image)
 
         // 제목
         if (list[position].title.length > 20)
-            holder.containerView.textTitle.text = list[position].title.substring(0..20)
+            holder.containerView.textTitle.text = list[position].title.substring(0..20) + ".."
         else holder.containerView.textTitle.text = list[position].title
 
         // 본문
         if (list[position].description.length > 60)
-            holder.containerView.textDesc.text = list[position].description.substring(0..60)
+            holder.containerView.textDesc.text = list[position].description.substring(0..60) + ".."
         else holder.containerView.textDesc.text = list[position].description
 
         // 키워드
@@ -56,17 +56,19 @@ class NewsListAdapter(private val list: MutableList<NewsData>):
             holder.containerView.textKey2.visibility = View.GONE
             holder.containerView.textKey3.visibility = View.GONE
         }
-        if (list[position].keywords.size > 0)
-            holder.containerView.textKey1.text = list[position].keywords[0]?.keyword
-        if (list[position].keywords.size > 1)
-            holder.containerView.textKey2.text = list[position].keywords[1]?.keyword
-        if (list[position].keywords.size > 2)
-            holder.containerView.textKey3.text = list[position].keywords[2]?.keyword
+        else {
+            if (list[position].keywords.size > 0)
+                holder.containerView.textKey1.text = list[position].keywords[0]?.keyword
+            if (list[position].keywords.size > 1)
+                holder.containerView.textKey2.text = list[position].keywords[1]?.keyword
+            if (list[position].keywords.size > 2)
+                holder.containerView.textKey3.text = list[position].keywords[2]?.keyword
+        }
 
         // 상세 보기 데이터
         val listStr = arrayListOf<String>()
         listStr.add(list[position].link)
-        for (i in 0..list[position].keywords.size - 1)
+        for (i in 0 until list[position].keywords.size)
             listStr.add(list[position].keywords[i]!!.keyword)
         holder.containerView.tag = listStr
     }

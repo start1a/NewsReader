@@ -23,21 +23,22 @@ class CacheDataUpdate: BroadcastReceiver() {
         private lateinit var mNewsDao: NewsDao
         lateinit var filesdir: File
         private var dateNews: Date? = null
+        const val MAX_NEWS_DATA_SIZE = 34
 
         fun setRealmInsatance() {
             mRealm = Realm.getDefaultInstance()
             mNewsDao = NewsDao(mRealm)
         }
 
-        suspend fun WebCrawling(endIndex: Int) = withContext(Dispatchers.IO) {
+        suspend fun WebCrawling(startIndex: Int, endIndex: Int) = withContext(Dispatchers.IO) {
 
-            val doc = Jsoup.connect("https://news.google.com/rss").get()
+            val doc = Jsoup.connect("https://news.google.com/rss?hl=ko&gl=KR&ceid=KR:ko").get()
             val html = doc.select("item")
             // db 객체 생성
             setRealmInsatance()
             // 불러올 데이터 인덱스
-            var index = 0
-            while (index < endIndex) {
+            var index = startIndex
+            while (index < endIndex && isActive) {
                 // 이미 데이터가 DB에 존재하는지 체크
                 val url = html[index].select("link").text()
                 val checkExistNewsData = mNewsDao.SearchNewsData(url)
@@ -100,7 +101,7 @@ class CacheDataUpdate: BroadcastReceiver() {
 
         fun ExtractKeyWord(desc: String): RealmList<KeywordNewsDesc> {
             // 3자 이상의 문자나 숫자 조합
-            val pattern = Pattern.compile("([^! (),.…·ㆍ~?=\\-\"\'“”‘’`+-/{}\\[\\]|<>\n\t]{2,})")
+            val pattern = Pattern.compile("([^! (),.…·ㆍ~?=\\-\"\'“”‘’`'+-/{}\\[\\]|<>\n\t]{2,})")
             val matcher = pattern.matcher(desc)
             val keyList = mutableListOf<Keyword>()
 
@@ -164,7 +165,7 @@ class CacheDataUpdate: BroadcastReceiver() {
             }
             AlarmTool.ACTION_UPDATE_CACHE_DATA -> {
                 GlobalScope.launch {
-                    WebCrawling(34)
+                    WebCrawling(0, MAX_NEWS_DATA_SIZE)
                     RemoveOldData(dateNews!!)
                     dateNews = null
                 }
